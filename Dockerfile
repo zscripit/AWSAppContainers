@@ -2,9 +2,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY AWSAppContainers.csproj .
-RUN dotnet restore
+RUN dotnet restore AWSAppContainers.csproj
 COPY . .
-RUN dotnet publish -c Release -o /app
+RUN dotnet publish AWSAppContainers.csproj -c Release -o /app --no-restore
 
 # ---------- Etapa 2: imagen final (solo runtime) ----------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
