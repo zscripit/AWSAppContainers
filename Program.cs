@@ -92,7 +92,7 @@ static string? ValidarProducto(ProductoDto dto)
 }
 
 // 1. Health check / raíz
-app.MapGet("/", () => Ok(new { servicio = "AWSAppContainers API", estado = "ok" }));
+app.MapGet("/", () => Ok(new { servicio = "Servicio de Jorge", estado = "ok" }));
 
 // ---------------- CATEGORIAS ----------------
 
