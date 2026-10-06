@@ -107,14 +107,21 @@ jobs:
             set -e
             # Descargar primero: el contenedor viejo sigue sirviendo mientras se baja la imagen
             docker pull "$IMAGE"
-            docker stop webapp 2>/dev/null || true
-            docker rm webapp 2>/dev/null || true
+            # Quitar el contenedor anterior y cualquier otro que ocupe los puertos 80 o 6061
+            docker rm -f webapp 2>/dev/null || true
+            for p in 80 6061; do
+              docker ps -aq --filter "publish=$p" | xargs -r docker rm -f
+            done
             docker run -d --name webapp \
               --restart unless-stopped \
               -p 80:80 -p 6061:6061 \
               -v sqlite-data:/data \
               "$IMAGE"
-            docker image prune -f
+            # Diagnóstico: estado y últimos logs del contenedor nuevo
+            sleep 5
+            docker ps -a --filter name=webapp
+            docker logs --tail 30 webapp
+            docker image prune -f || true
 
       - name: Verificar que la API responde
         env:
