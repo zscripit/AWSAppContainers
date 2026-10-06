@@ -1,0 +1,129 @@
+name: CI/CD - API a Docker Hub y AWS EC2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE_NAME: awsappcontainers
+  COVERAGE_MIN: 70
+
+jobs:
+  # ---------- 1. Pruebas + cobertura ----------
+  test:
+    name: Pruebas y cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar dependencias
+        run: dotnet restore Tests/AWSAppContainers.Tests/AWSAppContainers.Tests.csproj
+
+      - name: Ejecutar pruebas con cobertura
+        run: >
+          dotnet test Tests/AWSAppContainers.Tests/AWSAppContainers.Tests.csproj
+          --no-restore
+          --logger "console;verbosity=normal"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Generar resumen de cobertura
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:"coverage" \
+            -filefilters:"-*obj*" \
+            -reporttypes:"TextSummary;MarkdownSummaryGithub;Html"
+          echo "================ RESUMEN DE COBERTURA ================"
+          cat coverage/Summary.txt
+          cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validar cobertura mínima (${{ env.COVERAGE_MIN }}%)
+        run: |
+          LINE=$(grep -m1 -oP 'Line coverage:\s*\K[0-9.]+' coverage/Summary.txt)
+          echo "Cobertura de líneas: ${LINE}% (mínimo ${COVERAGE_MIN}%)"
+          awk -v c="$LINE" -v m="$COVERAGE_MIN" 'BEGIN { exit (c+0 >= m+0) ? 0 : 1 }' \
+            || { echo "::error::La cobertura ${LINE}% es menor al ${COVERAGE_MIN}% requerido"; exit 1; }
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+  # ---------- 2. Build y push a Docker Hub ----------
+  build-push:
+    name: Construir y publicar imagen
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login en Docker Hub (PAT)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build y push (:latest y :sha)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------- 3. Despliegue en EC2 ----------
+  deploy:
+    name: Desplegar en EC2
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Desplegar vía SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: IMAGE
+          script: |
+            set -e
+            # Descargar primero: el contenedor viejo sigue sirviendo mientras se baja la imagen
+            docker pull "$IMAGE"
+            docker stop webapp 2>/dev/null || true
+            docker rm webapp 2>/dev/null || true
+            docker run -d --name webapp \
+              --restart unless-stopped \
+              -p 80:80 -p 6061:6061 \
+              -v sqlite-data:/data \
+              "$IMAGE"
+            docker image prune -f
+
+      - name: Verificar que la API responde
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS -o /dev/null "http://$EC2_HOST/api/categorias"; then
+              echo "API arriba"; exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::La API no respondió después del despliegue"; exit 1

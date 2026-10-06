@@ -1,0 +1,52 @@
+@host = http://localhost:8080
+
+### 1. Health check
+GET {{host}}/
+
+### 2. Listar categorias
+GET {{host}}/api/categorias
+
+### 3. Obtener categoria con sus productos
+GET {{host}}/api/categorias/1
+
+### 4. Crear categoria
+POST {{host}}/api/categorias
+Content-Type: application/json
+
+{ "nombre": "Lacteos" }
+
+### Actualizar categoria
+PUT {{host}}/api/categorias/2
+Content-Type: application/json
+
+{ "nombre": "Botanas" }
+
+### 5. Eliminar categoria (cascada a sus productos)
+DELETE {{host}}/api/categorias/3
+
+### 6. Listar productos (filtro opcional ?categoriaId=1)
+GET {{host}}/api/productos
+
+### 7. Obtener producto
+GET {{host}}/api/productos/1
+
+### 8. Crear producto
+POST {{host}}/api/productos
+Content-Type: application/json
+
+{ "nombre": "Leche", "precio": 24.50, "categoriaId": 1 }
+
+### Actualizar producto
+PUT {{host}}/api/productos/1
+Content-Type: application/json
+
+{ "nombre": "Cafe americano", "precio": 40.00, "categoriaId": 1 }
+
+### 9. Eliminar producto
+DELETE {{host}}/api/productos/1
+
+### 10. Backup de la BD (descarga el .db)
+GET {{host}}/api/db/backup
+
+### 11. Vaciar la BD
+DELETE {{host}}/api/db/vaciar

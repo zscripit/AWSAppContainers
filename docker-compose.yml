@@ -1,0 +1,14 @@
+services:
+  webapp:
+    build: .
+    image: webapp:latest
+    container_name: webapp-container
+    ports:
+      - "8080:80"
+      - "6061:6061"
+    volumes:
+      - sqlite-data:/data
+    restart: unless-stopped
+
+volumes:
+  sqlite-data:

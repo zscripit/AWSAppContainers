@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AWSAppContainers.csproj" />
+  <Project Path="Tests/AWSAppContainers.Tests/AWSAppContainers.Tests.csproj" />
+</Solution>
