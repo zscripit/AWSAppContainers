@@ -124,11 +124,128 @@ docker login
 docker push <tu-usuario>/webapp:latest
 ```
 
-## Desplegar en EC2 (Ubuntu)
+## Pipeline CI/CD (GitHub Actions → Docker Hub → AWS EC2)
 
-```bash
-sudo apt update && sudo apt install -y docker.io
-sudo docker run -d -p 8080:80 -p 6061:6061 --name webapp-container -v sqlite-data:/data --restart unless-stopped <tu-usuario>/webapp:latest
+Cada `push` a `main` prueba, empaqueta y despliega la API automáticamente.
+Definido en [.github/workflows/main.yml](.github/workflows/main.yml).
+
+### Arquitectura
+
+```
+ git push (main)
+      │
+      ▼
+┌─────────────────────── GitHub Actions ───────────────────────┐
+│ 1. test         dotnet test + cobertura (mínimo 70 %)          │
+│        │                                                       │
+│        ▼                                                       │
+│ 2. build-push   docker build → Docker Hub                      │
+│                 tags :latest y :<commit sha>                   │
+│        │                                                       │
+│        ▼                                                       │
+│ 3. deploy       SSH a la EC2 → docker pull → reemplaza         │
+│                 el contenedor → verifica que la API responda   │
+└───────────────────────────────────────────────────────────────┘
+      │                                    │
+      ▼                                    ▼
+ Docker Hub  ───── docker pull ─────►  AWS EC2 (Ubuntu + Docker)
+ <usuario>/awsappcontainers            contenedor "webapp"
+                                       puerto 80 → API
+                                       volumen sqlite-data → /data
 ```
 
-Abrir el puerto 8080 en el Security Group de la instancia.
+| Job | Cuándo corre | Qué hace |
+|-----|--------------|----------|
+| `test` | `push` y `pull_request` a `main` | Pruebas xUnit con cobertura (coverlet + ReportGenerator). El resumen se muestra en el log y en el *Summary* del run. Falla si la cobertura de líneas es menor al 70 %. El reporte HTML se sube como artefacto `coverage-report`. |
+| `build-push` | Solo `push` a `main`, si `test` pasó | Login en Docker Hub con un Personal Access Token, build del `Dockerfile` y push con las etiquetas `:latest` y `:${{ github.sha }}`. |
+| `deploy` | Después de `build-push` | Por SSH en la EC2: descarga la imagen nueva, detiene y elimina el contenedor anterior, levanta el nuevo en el puerto 80 y limpia imágenes viejas. Después hace peticiones a `/api/categorias` hasta que la API responde. |
+
+La cobertura excluye el código autogenerado por el paquete de OpenAPI (carpeta `obj/`).
+
+### Cobertura en local
+
+```bash
+dotnet test Tests/AWSAppContainers.Tests --collect:"XPlat Code Coverage" --results-directory TestResults
+dotnet tool install -g dotnet-reportgenerator-globaltool
+reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:"TextSummary;Html" -filefilters:"-*obj*"
+```
+
+El resumen queda en `coverage/Summary.txt` y el reporte navegable en `coverage/index.html`.
+
+### Configuración
+
+#### 1. Docker Hub
+
+1. Crear una cuenta en <https://hub.docker.com>.
+2. En *Account settings → Personal access tokens*, generar un token con permiso **Read & Write**.
+
+El repositorio `awsappcontainers` se crea solo en el primer push.
+
+#### 2. Instancia EC2
+
+1. Lanzar una instancia **Ubuntu Server** y descargar su par de claves (`.pem`).
+2. En el **Security Group**, abrir estos puertos de entrada:
+
+   | Puerto | Uso |
+   |--------|-----|
+   | 22 | SSH (GitHub Actions) |
+   | 80 | HTTP (API) |
+   | 6061 | Socket TCP (opcional) |
+
+3. Instalar Docker y permitir que el usuario `ubuntu` lo use sin `sudo`. Sin este paso, el despliegue falla con `permission denied ... /var/run/docker.sock`:
+
+   ```bash
+   sudo apt update && sudo apt install -y docker.io
+   sudo systemctl enable --now docker
+   sudo usermod -aG docker ubuntu
+   ```
+
+   Cerrar la sesión SSH y volver a entrar para que tome el grupo; `docker ps` debe funcionar sin `sudo`.
+
+#### 3. GitHub Secrets
+
+En *Settings → Secrets and variables → Actions*, crear estos **Repository secrets**:
+
+| Secret | Valor |
+|--------|-------|
+| `DOCKERHUB_USERNAME` | Usuario de Docker Hub |
+| `DOCKERHUB_TOKEN` | Personal Access Token de Docker Hub |
+| `EC2_HOST` | IP pública de la EC2 |
+| `EC2_USER` | `ubuntu` |
+| `EC2_SSH_KEY` | Contenido completo del `.pem`, incluyendo `-----BEGIN ...` y `-----END ...` |
+
+> **Seguridad:** el repositorio no contiene contraseñas, IPs, tokens ni claves SSH; todo se lee de GitHub Secrets.
+
+El job `deploy` usa el environment `production`. GitHub lo crea solo, y en *Settings → Environments* se puede pedir aprobación manual antes de cada despliegue.
+
+### Probar el despliegue
+
+1. Cambiar algo visible, por ejemplo el mensaje del health check en [Program.cs](Program.cs):
+
+   ```csharp
+   app.MapGet("/", () => Ok(new { servicio = "Servicio de Jorge", estado = "ok" }));
+   ```
+
+2. Hacer commit y push:
+
+   ```bash
+   git commit -am "Cambia mensaje del health check"
+   git push origin main
+   ```
+
+3. Seguir el run en la pestaña **Actions**: `test` → `build-push` → `deploy`.
+4. Revisar en Docker Hub la nueva etiqueta con el hash del commit.
+5. Comprobar la API:
+
+   ```bash
+   curl http://<IP_EC2>/
+   curl http://<IP_EC2>/api/categorias
+   ```
+
+### Despliegue manual (sin pipeline)
+
+```bash
+docker pull <usuario>/awsappcontainers:latest
+docker stop webapp && docker rm webapp
+docker run -d --name webapp --restart unless-stopped -p 80:80 -p 6061:6061 -v sqlite-data:/data <usuario>/awsappcontainers:latest
+```
