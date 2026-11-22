@@ -182,15 +182,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copiar archivos de despliegue
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: deploy/
-          target: awsapp
-          rm: true
+      # La carpeta deploy/ viaja empaquetada en una variable por la misma conexión SSH del despliegue.
+      - name: Empaquetar archivos de despliegue
+        run: echo "DEPLOY_B64=$(tar czf - deploy | base64 -w0)" >> "$GITHUB_ENV"
 
       - name: Desplegar vía SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -204,9 +198,13 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: IMAGE,OO_EMAIL,OO_PASSWORD,JWT_KEY,APP_VERSION
+          envs: IMAGE,OO_EMAIL,OO_PASSWORD,JWT_KEY,APP_VERSION,DEPLOY_B64
           command_timeout: 15m
-          script: bash ~/awsapp/deploy/deploy.sh
+          script: |
+            set -e
+            rm -rf ~/awsapp && mkdir -p ~/awsapp
+            echo "$DEPLOY_B64" | base64 -d | tar xzf - -C ~/awsapp
+            bash ~/awsapp/deploy/deploy.sh
 
       - name: Verificar que la API y el frontend responden
         env:
