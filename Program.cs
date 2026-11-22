@@ -1,6 +1,12 @@
 using AWSAppContainers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +22,49 @@ builder.Services.AddHostedService<TcpServer>();   // socket TCP en el puerto 606
 // para que el manejador de abajo responda con el mismo schema que el resto de la API.
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 
+// ---------- Autenticación con JWT ----------
+var jwt = new JwtSettings(builder.Configuration["JWT_KEY"]);
+builder.Services.AddSingleton(jwt);
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.MapInboundClaims = false;
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = JwtSettings.Issuer,
+            ValidAudience = JwtSettings.Issuer,
+            IssuerSigningKey = jwt.Key,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+builder.Services.AddAuthorization();
+
+// ---------- Observabilidad: OpenTelemetry (OTLP) hacia OpenObserve ----------
+// Solo se activa si existe OTEL_EXPORTER_OTLP_ENDPOINT; el exportador lee de las variables
+// OTEL_EXPORTER_OTLP_* el endpoint, el protocolo y el encabezado de autorización.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+{
+    var serviceName = builder.Configuration["OTEL_SERVICE_NAME"] ?? "awsappcontainers";
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(r => r.AddService(serviceName, serviceVersion: builder.Configuration["APP_VERSION"] ?? "dev"))
+        .WithTracing(t => t
+            .AddAspNetCoreInstrumentation(o => o.RecordException = true)
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddOtlpExporter())
+        .WithMetrics(m => m
+            .AddAspNetCoreInstrumentation()      // http.server.request.duration por ruta, método y status
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter());
+    builder.Logging.AddOpenTelemetry(o =>
+    {
+        o.IncludeFormattedMessage = true;
+        o.IncludeScopes = true;
+        o.AddOtlpExporter();
+    });
+}
+
 var app = builder.Build();
 
 // Crea la BD y la siembra con datos de ejemplo al arrancar.
@@ -23,6 +72,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     db.Database.EnsureCreated();
+    db.EnsureUsuariosTable();
     if (!db.Categorias.Any())
     {
         var bebidas = new Categoria { Nombre = "Bebidas" };
@@ -46,6 +96,10 @@ app.UseExceptionHandler(e => e.Run(async ctx =>
         BadHttpRequestException b => (b.StatusCode, "La petición no es válida: revise el cuerpo JSON y los parámetros"),
         _ => (500, "Error interno del servidor"),
     };
+    if (status >= 500)
+        app.Logger.LogError(ex, "Error no controlado en {Method} {Path}", ctx.Request.Method, ctx.Request.Path);
+    else
+        app.Logger.LogWarning("Petición inválida {Method} {Path}: {Error}", ctx.Request.Method, ctx.Request.Path, ex?.Message);
     ctx.Response.StatusCode = status;
     await ctx.Response.WriteAsJsonAsync(new { statusCode = status, data = new[] { new { error = mensaje } } });
 }));
@@ -57,6 +111,8 @@ app.UseStatusCodePages(async ctx =>
     var status = ctx.HttpContext.Response.StatusCode;
     var mensaje = status switch
     {
+        401 => "Debe iniciar sesión",
+        403 => "No tiene permiso para esta acción",
         404 => "Ruta no encontrada",
         405 => "Método HTTP no permitido para esta ruta",
         415 => "El Content-Type debe ser application/json",
@@ -66,6 +122,13 @@ app.UseStatusCodePages(async ctx =>
 });
 
 app.MapOpenApi();
+
+// Frontend (wwwroot): "/" sirve index.html
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Envoltura del schema pedido: { statusCode: 200, data: [] }
 static IResult Ok(object? data, int statusCode = 200) =>
@@ -91,8 +154,11 @@ static string? ValidarProducto(ProductoDto dto)
     return null;
 }
 
-// 1. Health check / raíz
-app.MapGet("/", () => Ok(new { servicio = "Servicio de AWS API en EC2, revisando", estado = "ok" }));
+// 1. Health check (la raíz "/" ahora sirve el frontend)
+app.MapGet("/api/health", () => Ok(new { servicio = "Servicio de AWS API en EC2, revisando", estado = "ok" }));
+
+// Login, registro y CRUD de usuarios
+app.MapUsuarios();
 
 // ---------------- CATEGORIAS ----------------
 

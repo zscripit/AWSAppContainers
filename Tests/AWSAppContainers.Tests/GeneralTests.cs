@@ -7,15 +7,28 @@ namespace AWSAppContainers.Tests;
 /// <summary>Health check, mantenimiento de la BD (backup y vaciar) y errores de ruta/método.</summary>
 public class GeneralTests : ApiTestBase
 {
-    // ---------- GET / ----------
+    // ---------- GET /api/health y frontend ----------
 
     [Fact]
-    public async Task Raiz_DevuelveEstadoOk()
+    public async Task Health_DevuelveEstadoOk()
     {
-        var (status, data) = await Leer(await Client.GetAsync("/"));
+        var (status, data) = await Leer(await Client.GetAsync("/api/health"));
 
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.Equal("ok", data[0].GetProperty("estado").GetString());
+    }
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/login.html")]
+    [InlineData("/registro.html")]
+    [InlineData("/usuarios.html")]
+    public async Task Frontend_SirvePaginasHtml(string ruta)
+    {
+        var resp = await Client.GetAsync(ruta);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        Assert.Equal("text/html", resp.Content.Headers.ContentType?.MediaType);
     }
 
     // ---------- GET /api/db/backup ----------

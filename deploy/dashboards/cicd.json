@@ -1,0 +1,230 @@
+{
+  "version": 5,
+  "title": "Pipeline CI/CD",
+  "description": "Resultado de las pruebas y despliegues registrados por GitHub Actions",
+  "tabs": [
+    {
+      "tabId": "default",
+      "name": "Default",
+      "panels": [
+        {
+          "id": "Panel_1",
+          "type": "table",
+          "title": "Ejecuciones del pipeline",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT _timestamp, event, status, branch, commit_sha, actor, run_url FROM \"cicd\" ORDER BY _timestamp DESC LIMIT 100",
+              "customQuery": true,
+              "fields": {
+                "stream": "cicd",
+                "stream_type": "logs",
+                "x": [
+                  {
+                    "label": "_timestamp",
+                    "alias": "_timestamp",
+                    "column": "_timestamp",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "event",
+                    "alias": "event",
+                    "column": "event",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "status",
+                    "alias": "status",
+                    "column": "status",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "branch",
+                    "alias": "branch",
+                    "column": "branch",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "commit_sha",
+                    "alias": "commit_sha",
+                    "column": "commit_sha",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "actor",
+                    "alias": "actor",
+                    "column": "actor",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "run_url",
+                    "alias": "run_url",
+                    "column": "run_url",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1,
+                "limit": 0
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 12,
+            "i": 1
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        },
+        {
+          "id": "Panel_2",
+          "type": "pie",
+          "title": "Resultados por estado",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT status, count(*) AS total FROM \"cicd\" GROUP BY status",
+              "customQuery": true,
+              "fields": {
+                "stream": "cicd",
+                "stream_type": "logs",
+                "x": [
+                  {
+                    "label": "status",
+                    "alias": "status",
+                    "column": "status",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "total",
+                    "alias": "total",
+                    "column": "total",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1,
+                "limit": 0
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 12,
+            "w": 24,
+            "h": 10,
+            "i": 2
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        },
+        {
+          "id": "Panel_3",
+          "type": "bar",
+          "title": "Despliegues por día",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp, '1 day') AS dia, count(*) AS despliegues FROM \"cicd\" WHERE event = 'deploy' GROUP BY dia ORDER BY dia",
+              "customQuery": true,
+              "fields": {
+                "stream": "cicd",
+                "stream_type": "logs",
+                "x": [
+                  {
+                    "label": "dia",
+                    "alias": "dia",
+                    "column": "dia",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "despliegues",
+                    "alias": "despliegues",
+                    "column": "despliegues",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1,
+                "limit": 0
+              }
+            }
+          ],
+          "layout": {
+            "x": 24,
+            "y": 12,
+            "w": 24,
+            "h": 10,
+            "i": 3
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        }
+      ]
+    }
+  ]
+}

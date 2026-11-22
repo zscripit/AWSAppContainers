@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AWS App Containers</title>
+  <script>
+    // Con sesión va directo a usuarios; sin sesión, al login.
+    window.location.replace(localStorage.getItem("token") ? "/usuarios.html" : "/login.html");
+  </script>
+</head>
+<body></body>
+</html>

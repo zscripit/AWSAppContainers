@@ -1,0 +1,216 @@
+{
+  "version": 5,
+  "title": "Alertas operativas",
+  "description": "Alertas disparadas por OpenObserve (CPU, RAM, disco, errores, latencia y pipeline)",
+  "tabs": [
+    {
+      "tabId": "default",
+      "name": "Default",
+      "panels": [
+        {
+          "id": "Panel_1",
+          "type": "table",
+          "title": "Alertas disparadas",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT _timestamp, alerta, stream, inicio, fin FROM \"alertas\" ORDER BY _timestamp DESC LIMIT 100",
+              "customQuery": true,
+              "fields": {
+                "stream": "alertas",
+                "stream_type": "logs",
+                "x": [
+                  {
+                    "label": "_timestamp",
+                    "alias": "_timestamp",
+                    "column": "_timestamp",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "alerta",
+                    "alias": "alerta",
+                    "column": "alerta",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "stream",
+                    "alias": "stream",
+                    "column": "stream",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "inicio",
+                    "alias": "inicio",
+                    "column": "inicio",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "fin",
+                    "alias": "fin",
+                    "column": "fin",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1,
+                "limit": 0
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 12,
+            "i": 1
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        },
+        {
+          "id": "Panel_2",
+          "type": "bar",
+          "title": "Alertas por tipo",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT alerta, count(*) AS veces FROM \"alertas\" GROUP BY alerta",
+              "customQuery": true,
+              "fields": {
+                "stream": "alertas",
+                "stream_type": "logs",
+                "x": [
+                  {
+                    "label": "alerta",
+                    "alias": "alerta",
+                    "column": "alerta",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "veces",
+                    "alias": "veces",
+                    "column": "veces",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1,
+                "limit": 0
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 12,
+            "w": 24,
+            "h": 10,
+            "i": 2
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        },
+        {
+          "id": "Panel_3",
+          "type": "line",
+          "title": "Alertas por hora",
+          "description": "",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "decimals": 2
+          },
+          "queryType": "sql",
+          "queries": [
+            {
+              "query": "SELECT histogram(_timestamp, '1 hour') AS hora, count(*) AS alertas FROM \"alertas\" GROUP BY hora ORDER BY hora",
+              "customQuery": true,
+              "fields": {
+                "stream": "alertas",
+                "stream_type": "logs",
+                "x": [
+                  {
+                    "label": "hora",
+                    "alias": "hora",
+                    "column": "hora",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "alertas",
+                    "alias": "alertas",
+                    "column": "alertas",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "",
+                "layer_type": "scatter",
+                "weight_fixed": 1,
+                "limit": 0
+              }
+            }
+          ],
+          "layout": {
+            "x": 24,
+            "y": 12,
+            "w": 24,
+            "h": 10,
+            "i": 3
+          },
+          "htmlContent": "",
+          "markdownContent": ""
+        }
+      ]
+    }
+  ]
+}

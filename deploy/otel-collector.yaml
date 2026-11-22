@@ -1,0 +1,60 @@
+# OpenTelemetry Collector: recolecta las métricas del servidor (EC2) y las envía a OpenObserve.
+#   - hostmetrics: CPU, memoria, red (ancho de banda), disco, sistema de archivos y carga.
+#   - prometheus (node-exporter): temperatura del hardware, cuando la instancia expone sensores.
+receivers:
+  hostmetrics:
+    root_path: /hostfs
+    collection_interval: 15s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
+      network: {}
+      disk: {}
+      load: {}
+      filesystem:
+        metrics:
+          system.filesystem.utilization:
+            enabled: true
+        exclude_fs_types:
+          fs_types: [autofs, binfmt_misc, cgroup2, devpts, devtmpfs, overlay, proc, squashfs, sysfs, tmpfs, nsfs, tracefs]
+          match_type: strict
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: node-exporter
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["node-exporter:9100"]
+          metric_relabel_configs:
+            # Solo temperatura: lo demás ya viene de hostmetrics.
+            - source_labels: [__name__]
+              regex: "node_(hwmon_temp_celsius|thermal_zone_temp|hwmon_chip_names)"
+              action: keep
+
+processors:
+  batch: {}
+  resourcedetection:
+    detectors: [env, system]
+    system:
+      hostname_sources: [os]
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: ${env:OO_OTLP_ENDPOINT}
+    headers:
+      Authorization: Basic ${env:OO_AUTH}
+      stream-name: default
+
+service:
+  pipelines:
+    metrics:
+      receivers: [hostmetrics, prometheus]
+      processors: [resourcedetection, batch]
+      exporters: [otlphttp/openobserve]

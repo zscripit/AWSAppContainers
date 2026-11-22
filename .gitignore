@@ -4,3 +4,7 @@ obj/
 data/
 *.user
 TestResults/
+e2e/results/
+e2e/artifacts/
+__pycache__/
+.pytest_cache/
