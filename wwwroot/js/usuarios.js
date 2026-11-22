@@ -1,4 +1,5 @@
 import { api, session, showAlert, hideAlert } from "/js/api.js";
+import "/js/layout.js";
 
 const $ = (id) => document.getElementById(id);
 const alert = $("alert");
@@ -11,13 +12,6 @@ const confirmar = $("confirmar");
 let editandoId = null;
 let eliminandoId = null;
 let busquedaTimer;
-
-$("current-user").textContent = session.usuario ? `${session.usuario.nombre} (${session.usuario.email})` : "";
-
-$("logout").addEventListener("click", () => {
-  session.clear();
-  window.location.href = "/login.html";
-});
 
 function fila(u) {
   const tr = document.createElement("tr");

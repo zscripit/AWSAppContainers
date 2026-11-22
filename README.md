@@ -70,6 +70,7 @@ HTML, CSS y JavaScript sin frameworks en [wwwroot](wwwroot), servido por la mism
 | `/login.html` | Inicio de sesión (guarda el JWT en `localStorage`) |
 | `/registro.html` | Crear cuenta, con confirmación de contraseña |
 | `/usuarios.html` | CRUD de usuarios: tabla, búsqueda, crear/editar en un diálogo y eliminar con confirmación |
+| `/productos.html` | CRUD de productos: tabla con precio y categoría, búsqueda, filtro por categoría, crear/editar y eliminar |
 
 `/` redirige al login o a usuarios según haya sesión. Si el token expira, la app regresa al login.
 
@@ -125,6 +126,7 @@ En [e2e](e2e) (Python + pytest + Playwright), contra la aplicación en ejecució
 |---------|-------|
 | `test_api.py` | Backend: health, archivos del frontend, registro, login, JWT, CRUD de usuarios, catálogo |
 | `test_frontend.py` | Frontend en el navegador: redirecciones, registro, login, logout, crear/editar/eliminar/buscar usuarios |
+| `test_productos.py` | CRUD de productos en el navegador: listado, filtro por categoría, búsqueda, validaciones, crear/editar/eliminar |
 
 ```bash
 dotnet run                     # en otra terminal; o la app en cualquier URL

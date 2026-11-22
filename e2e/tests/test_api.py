@@ -18,8 +18,8 @@ def test_health(api):
     assert data(resp)[0]["estado"] == "ok"
 
 
-@pytest.mark.parametrize("path", ["/", "/login.html", "/registro.html", "/usuarios.html", "/css/styles.css",
-                                  "/js/api.js", "/js/usuarios.js"])
+@pytest.mark.parametrize("path", ["/", "/login.html", "/registro.html", "/usuarios.html", "/productos.html", "/css/styles.css",
+                                  "/js/api.js", "/js/usuarios.js", "/js/productos.js", "/js/layout.js"])
 def test_archivos_del_frontend(api, path):
     assert api.get(path).status == 200
 

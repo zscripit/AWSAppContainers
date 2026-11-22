@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Productos · AWS App Containers</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script>if (!localStorage.getItem("token")) window.location.replace("/login.html");</script>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">AWS App Containers</span>
+    <nav class="nav" aria-label="Secciones">
+      <a href="/usuarios.html" data-testid="nav-usuarios">Usuarios</a>
+      <a href="/productos.html" class="active" aria-current="page" data-testid="nav-productos">Productos</a>
+    </nav>
+    <div class="session">
+      <span id="current-user" data-testid="current-user"></span>
+      <button class="secondary" id="logout" data-testid="logout">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main>
+    <h1>Productos</h1>
+    <div class="alert" id="alert" data-testid="alert" role="alert" hidden></div>
+
+    <div class="toolbar">
+      <input id="buscar" type="search" placeholder="Buscar por nombre" data-testid="buscar" aria-label="Buscar">
+      <select id="filtro-categoria" data-testid="filtro-categoria" aria-label="Filtrar por categoría">
+        <option value="">Todas las categorías</option>
+      </select>
+      <button id="nuevo" data-testid="nuevo">Nuevo producto</button>
+    </div>
+
+    <div class="panel">
+      <table data-testid="tabla-productos">
+        <thead>
+          <tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Categoría</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="filas"></tbody>
+      </table>
+      <p class="empty" id="vacio" data-testid="vacio" hidden>No hay productos que coincidan.</p>
+    </div>
+  </main>
+
+  <dialog id="dialogo" data-testid="dialogo">
+    <form id="producto-form" method="dialog" novalidate>
+      <h2 id="dialogo-titulo">Nuevo producto</h2>
+      <div class="alert" id="dialogo-alert" data-testid="dialogo-alert" role="alert" hidden></div>
+      <div class="field">
+        <label for="f-nombre">Nombre</label>
+        <input id="f-nombre" name="nombre" required maxlength="150" data-testid="f-nombre">
+      </div>
+      <div class="field">
+        <label for="f-precio">Precio</label>
+        <input id="f-precio" name="precio" type="number" min="0" step="0.01" required data-testid="f-precio">
+      </div>
+      <div class="field">
+        <label for="f-categoria">Categoría</label>
+        <select id="f-categoria" name="categoria" required data-testid="f-categoria"></select>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="cancelar" data-testid="cancelar">Cancelar</button>
+        <button type="submit" id="guardar" data-testid="guardar">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirmar" data-testid="confirmar">
+    <h2>Eliminar producto</h2>
+    <p id="confirmar-texto"></p>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="confirmar-no" data-testid="confirmar-no">Cancelar</button>
+      <button type="button" class="danger" id="confirmar-si" data-testid="confirmar-si">Eliminar</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="/js/productos.js"></script>
+</body>
+</html>

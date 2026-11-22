@@ -23,6 +23,7 @@ public class GeneralTests : ApiTestBase
     [InlineData("/login.html")]
     [InlineData("/registro.html")]
     [InlineData("/usuarios.html")]
+    [InlineData("/productos.html")]
     public async Task Frontend_SirvePaginasHtml(string ruta)
     {
         var resp = await Client.GetAsync(ruta);
