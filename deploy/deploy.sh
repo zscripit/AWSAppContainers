@@ -17,7 +17,13 @@ OO_AUTH="$(printf '%s:%s' "$OO_EMAIL" "$OO_PASSWORD" | base64 -w0)"
 
 docker network inspect "$NET" >/dev/null 2>&1 || docker network create "$NET"
 
-# Solo crea un contenedor si no existe o si su imagen cambió; así OpenObserve no se reinicia en cada deploy.
+# El disco de la instancia es chico: antes de descargar nada se borran las imágenes que
+# ningún contenedor usa (las de despliegues anteriores). No toca volúmenes ni datos.
+docker image prune -a -f >/dev/null || true
+df -h / | tail -1
+
+# Solo crea un contenedor si no existe, si su imagen cambió o si cambió su configuración;
+# así OpenObserve no se reinicia en cada deploy pero sí toma los cambios de este script.
 ensure() {
   # Uso: ensure nombre imagen [opciones de docker run...] [-- argumentos del contenedor...]
   local name="$1" image="$2"; shift 2
@@ -25,12 +31,16 @@ ensure() {
   while [ $# -gt 0 ] && [ "$1" != "--" ]; do opts+=("$1"); shift; done
   [ "${1:-}" = "--" ] && shift && args=("$@")
   docker pull -q "$image" >/dev/null
-  local running wanted
+  local running wanted config current
   running="$(docker inspect -f '{{.Image}}' "$name" 2>/dev/null || true)"
   wanted="$(docker image inspect -f '{{.Id}}' "$image")"
-  if [ "$running" != "$wanted" ] || [ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" != "true" ]; then
+  config="$(printf '%s\n' "$image" "${opts[@]}" "${args[@]}" | sha256sum | cut -c1-16)"
+  current="$(docker inspect -f '{{index .Config.Labels "deploy.config"}}' "$name" 2>/dev/null || true)"
+  if [ "$running" != "$wanted" ] || [ "$current" != "$config" ] \
+     || [ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" != "true" ]; then
     docker rm -f "$name" >/dev/null 2>&1 || true
-    docker run -d --name "$name" --network "$NET" --restart unless-stopped "${opts[@]}" "$image" "${args[@]}" >/dev/null
+    docker run -d --name "$name" --network "$NET" --restart unless-stopped --label "deploy.config=$config" \
+      "${opts[@]}" "$image" "${args[@]}" >/dev/null
     echo "-> $name (re)creado"
   else
     echo "-> $name sin cambios"
@@ -44,6 +54,7 @@ ensure openobserve public.ecr.aws/zinclabs/openobserve:latest \
   -e ZO_ROOT_USER_PASSWORD="$OO_PASSWORD" \
   -e ZO_DATA_DIR=/data \
   -e ZO_SSRF_ALLOW_LOOPBACK=true \
+  -e ZO_COMPACT_DATA_RETENTION_DAYS=3 \
   -v openobserve-data:/data
 
 echo "Esperando a OpenObserve..."
@@ -78,7 +89,7 @@ docker run -d --name webapp --network "$NET" --restart unless-stopped \
   -e OTEL_EXPORTER_OTLP_ENDPOINT=http://openobserve:5080/api/default \
   -e OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
   -e OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic $OO_AUTH" \
-  -e OTEL_METRIC_EXPORT_INTERVAL=15000 \
+  -e OTEL_METRIC_EXPORT_INTERVAL=30000 \
   "$IMAGE"
 
 # Unas peticiones de calentamiento hacen que la app publique sus primeras métricas HTTP,
@@ -92,4 +103,5 @@ OO_EMAIL="$OO_EMAIL" OO_PASSWORD="$OO_PASSWORD" bash "$DIR/setup-openobserve.sh"
 sleep 5
 docker ps -a --filter network="$NET" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 docker logs --tail 20 webapp
-docker image prune -f >/dev/null || true
+docker image prune -a -f >/dev/null || true
+df -h / | tail -1
