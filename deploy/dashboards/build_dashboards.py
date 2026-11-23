@@ -97,9 +97,11 @@ app = dashboard("Aplicación AWSAppContainers", "Latencia, peticiones por segund
            "sum by (http_route) (rate(http_server_request_duration_sum[5m]))"
            " / sum by (http_route) (rate(http_server_request_duration_count[5m]))", "{http_route}", "seconds",
            x=24, y=18, decimals=3),
+    # severity_number sigue el estándar de OpenTelemetry: 13-16 = WARN, 17 o más = ERROR/FATAL.
     sql(7, "Últimos errores y advertencias de la aplicación",
-        "SELECT _timestamp, severity_text, body FROM \"default\" WHERE severity_text IN ('Error', 'Warning', "
-        "'ERROR', 'WARN') ORDER BY _timestamp DESC LIMIT 50", "default", "logs", x=0, y=27),
+        "SELECT _timestamp, severity, body, exception_type, exception_message FROM \"default\" "
+        "WHERE severity_number >= 13 ORDER BY _timestamp DESC LIMIT 50", "default", "logs", x=0, y=27,
+        xcols=("_timestamp", "severity", "body", "exception_type", "exception_message")),
 ])
 
 cicd = dashboard("Pipeline CI/CD", "Resultado de las pruebas y despliegues registrados por GitHub Actions", [

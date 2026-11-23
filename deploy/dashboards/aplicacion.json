@@ -320,12 +320,48 @@
           "queryType": "sql",
           "queries": [
             {
-              "query": "SELECT _timestamp, severity_text, body FROM \"default\" WHERE severity_text IN ('Error', 'Warning', 'ERROR', 'WARN') ORDER BY _timestamp DESC LIMIT 50",
+              "query": "SELECT _timestamp, severity, body, exception_type, exception_message FROM \"default\" WHERE severity_number >= 13 ORDER BY _timestamp DESC LIMIT 50",
               "customQuery": true,
               "fields": {
                 "stream": "default",
                 "stream_type": "logs",
-                "x": [],
+                "x": [
+                  {
+                    "label": "_timestamp",
+                    "alias": "_timestamp",
+                    "column": "_timestamp",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "severity",
+                    "alias": "severity",
+                    "column": "severity",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "body",
+                    "alias": "body",
+                    "column": "body",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "exception_type",
+                    "alias": "exception_type",
+                    "column": "exception_type",
+                    "color": null,
+                    "aggregationFunction": null
+                  },
+                  {
+                    "label": "exception_message",
+                    "alias": "exception_message",
+                    "column": "exception_message",
+                    "color": null,
+                    "aggregationFunction": null
+                  }
+                ],
                 "y": [],
                 "z": [],
                 "filter": {
