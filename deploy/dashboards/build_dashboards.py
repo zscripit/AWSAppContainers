@@ -72,8 +72,11 @@ infra = dashboard("Infraestructura EC2", "CPU, memoria RAM, ancho de banda, disc
            "bytes/second", x=24, y=18),
     promql(7, "Uso del sistema de archivos (%)", "100 * max by (mountpoint) (system_filesystem_utilization)",
            "{mountpoint}", "percent", x=0, y=27),
+    # Un sensor no implementado reporta el cero absoluto (-273.15 °C); en EC2 lo hace el disco NVMe
+    # de EBS. Se descartan las lecturas imposibles para no graficar datos falsos.
     promql(8, "Temperatura (°C)",
-           "max by (chip, sensor) (node_hwmon_temp_celsius) or max by (zone) (node_thermal_zone_temp)",
+           "max by (chip, sensor) (node_hwmon_temp_celsius > -50)"
+           " or max by (zone) (node_thermal_zone_temp > -50)",
            "{chip} {sensor}{zone}", "celsius", x=24, y=27),
 ])
 

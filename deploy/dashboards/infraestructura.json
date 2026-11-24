@@ -373,7 +373,7 @@
           "queryType": "promql",
           "queries": [
             {
-              "query": "max by (chip, sensor) (node_hwmon_temp_celsius) or max by (zone) (node_thermal_zone_temp)",
+              "query": "max by (chip, sensor) (node_hwmon_temp_celsius > -50) or max by (zone) (node_thermal_zone_temp > -50)",
               "customQuery": true,
               "fields": {
                 "stream": "",
