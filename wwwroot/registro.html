@@ -46,7 +46,7 @@
       hideAlert(alert);
       const body = { nombre: form.nombre.value.trim(), email: form.email.value.trim(), password: form.password.value };
       if (!body.nombre || !body.email || !body.password) return showAlert(alert, "Todos los campos son obligatorios");
-      if (body.password !== form.confirmar.value) return showAlert(alert, "Las contraseñas no coinciden");
+      if (body.password !== form.confirmar.value) return showAlert(alert, "Las contraseñas no coinciden"); // Cambiar !== por === 
 
       const button = form.querySelector("button");
       button.disabled = true;

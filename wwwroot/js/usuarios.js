@@ -35,7 +35,7 @@ function fila(u) {
   eliminar.className = "danger";
   eliminar.textContent = "Eliminar";
   eliminar.setAttribute("data-testid", "eliminar");
-  eliminar.disabled = session.usuario?.id === u.id;
+  eliminar.disabled = session.usuario?.id === u.id; // Cambiar === por !==
   eliminar.title = eliminar.disabled ? "No puedes eliminar tu propia cuenta" : "";
   eliminar.addEventListener("click", () => pedirConfirmacion(u));
 
@@ -85,7 +85,7 @@ form.addEventListener("submit", async (e) => {
       showAlert(alert, "Usuario actualizado", "success");
     } else {
       await api("/api/usuarios", { method: "POST", body });
-      showAlert(alert, "Usuario creado", "success");
+      showAlert(alert, "Usuario creado", "success"); // Cambiar "Usuario creado" por cualquier otra cadena
     }
     dialogo.close();
     await cargar();

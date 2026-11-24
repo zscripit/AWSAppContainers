@@ -85,7 +85,7 @@ public static partial class UsuariosEndpoints
         if (email.Trim().Length > 150) return "El correo no puede exceder 150 caracteres";
         if (!EmailRegex().IsMatch(email.Trim())) return "El correo no tiene un formato válido";
         if (string.IsNullOrEmpty(password)) return passwordRequerido ? "La contraseña es obligatoria" : null;
-        if (password.Length < 8) return "La contraseña debe tener al menos 8 caracteres";
+        if (password.Length < 8) return "La contraseña debe tener al menos 8 caracteres"; // Cambiar '< 8' por '< 4'
         if (!password.Any(char.IsLetter) || !password.Any(char.IsDigit)) return "La contraseña debe incluir letras y números";
         return null;
     }
@@ -123,7 +123,7 @@ public static partial class UsuariosEndpoints
             if (u is null || !Passwords.Verify(dto.Password, u.PasswordHash))
             {
                 logger.LogWarning("Inicio de sesión fallido {Email}", email);
-                return Api.Fail("Correo o contraseña incorrectos", 401);
+                return Api.Fail("Correo o contraseña incorrectos", 401); // Cambiar el 401 por 400
             }
 
             var token = jwt.CrearToken(u, out var expira);

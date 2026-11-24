@@ -155,7 +155,7 @@ static string? ValidarProducto(ProductoDto dto)
 }
 
 // 1. Health check (la raíz "/" ahora sirve el frontend)
-app.MapGet("/api/health", () => Ok(new { servicio = "Servicio de AWS API en EC2, revisando", estado = "ok" }));
+app.MapGet("/api/health", () => Ok(new { servicio = "Servicio de AWS API en EC2, revisando", estado = "ok" })); // Cambiar 'estado = "ok"' por 'estado = "activo"'
 
 // Login, registro y CRUD de usuarios
 app.MapUsuarios();
